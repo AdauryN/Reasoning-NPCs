@@ -1,39 +1,25 @@
-using System.Collections.Generic;
-
-namespace LLMFramework.Core
+namespace NPC_AI.LLM
 {
-    /// <summary>
-    /// Encapsulates the result of a call to the LLM.
-    /// Sprint 3: added support for ToolCalls — when the LLM decides
-    /// use a tool instead of responding in text.
-    /// </summary>
     public class LLMResponse
     {
-        public string Content   { get; set; }
-        public bool   IsSuccess { get; set; }
+        public string Text { get; set; }
+        public bool Success { get; set; }
         public string ErrorMessage { get; set; }
+        public float LatencyMs { get; set; }
+        public int PromptTokens { get; set; }
+        public int CompletionTokens { get; set; }
 
-        /// <summary>
-        /// Tool calls that the LLM wants to execute.
-        /// If HasToolCall == true, Content is empty and the agent must
-        /// execute the tools before obtaining the final answer.
-        /// </summary>
-        public List<ToolCall> ToolCalls { get; set; }
+        public static LLMResponse Failure(string error) =>
+            new LLMResponse { Success = false, ErrorMessage = error };
 
-        public bool HasToolCall => ToolCalls != null && ToolCalls.Count > 0;
-
-        public static LLMResponse Success(string content)
-            => new LLMResponse { Content = content, IsSuccess = true };
-
-        public static LLMResponse WithToolCalls(List<ToolCall> calls, string rawToolCallsJson)
-            => new LLMResponse
+        public static LLMResponse Ok(string text, float latencyMs, int promptTokens = 0, int completionTokens = 0) =>
+            new LLMResponse
             {
-                IsSuccess       = true,
-                Content         = rawToolCallsJson, // preserved to inject into the history
-                ToolCalls       = calls
+                Success = true,
+                Text = text,
+                LatencyMs = latencyMs,
+                PromptTokens = promptTokens,
+                CompletionTokens = completionTokens
             };
-
-        public static LLMResponse Failure(string error)
-            => new LLMResponse { IsSuccess = false, ErrorMessage = error, Content = string.Empty };
     }
 }
