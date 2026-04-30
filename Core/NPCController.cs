@@ -38,7 +38,7 @@ namespace NPC_AI.Core
         private async void Start()
         {
             if (behaviorTracker == null)
-                behaviorTracker = FindObjectOfType<PlayerBehaviorTracker>();
+                behaviorTracker = FindAnyObjectByType<PlayerBehaviorTracker>();
 
             _llm = LLMServiceFactory.GetShared(llmConfig);
             await _llm.InitializeAsync(_lifetimeCts.Token);
