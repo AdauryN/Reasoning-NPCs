@@ -4,7 +4,7 @@
  * Exposes live Unity game state as LLM-callable tools via the Model Context Protocol.
  * Transport: stdio (launch manually or have Unity spawn it via System.Diagnostics.Process).
  *
- * Unity must run a GameStateServer (HttpListener on port 7654) that responds to GET /state
+ * Unity must run a GameStateServer that responds to GET /state
  * with a JSON object describing the current game state snapshot.
  *
  * Usage:
@@ -23,7 +23,7 @@ import { z } from "zod";
 
 const UNITY_STATE_URL = "http://localhost:7654/state";
 
-// ─── Fetch live state from Unity ─────────────────────────────────────────────
+// Fetch live state from Unity
 
 async function fetchUnityState() {
   try {
@@ -42,7 +42,7 @@ async function fetchUnityState() {
   }
 }
 
-// ─── MCP server setup ─────────────────────────────────────────────────────────
+// MCP server setup
 
 const server = new McpServer({
   name: "npc-ai-mcp-server",
@@ -104,7 +104,7 @@ server.tool(
   }
 );
 
-// ─── Start ────────────────────────────────────────────────────────────────────
+// Start
 
 const transport = new StdioServerTransport();
 await server.connect(transport);
