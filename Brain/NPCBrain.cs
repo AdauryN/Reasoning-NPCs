@@ -7,11 +7,13 @@ using NPC_AI.Core;
 using NPC_AI.LLM;
 using NPC_AI.Memory;
 using NPC_AI.PlayerAnalysis;
+using NPC_AI.RAG;
 using UnityEngine;
 
 namespace NPC_AI.Brain
 {
-    /// Orchestrates a single NPCs decision pipeline:
+    /// Orchestrates a single NPC's decision pipeline:
+    /// WorldView + PlayerProfile + Memory → ContextBuilder → LLM → ActionParser → ActionCommand
     /// Always falls back to a rule-based policy if the LLM fails or times out.
     /// The LLM is the enhancement layer, not the safety-critical layer.
     public class NPCBrain : INPCBrain
@@ -48,6 +50,8 @@ namespace NPC_AI.Brain
         private readonly NPCConfig _config;
         private readonly PersonalityProfile _personality;
         private readonly PlayerBehaviorTracker _behaviorTracker;
+        private readonly IEmbeddingService _embedder;
+        private readonly string _npcId;
         private readonly ActionRegistry _actionRegistry;
         private readonly ContextBuilder _contextBuilder;
         private readonly ActionParser _actionParser;
@@ -60,21 +64,44 @@ namespace NPC_AI.Brain
             ILLMService llm,
             NPCConfig config,
             PersonalityProfile personality,
-            PlayerBehaviorTracker behaviorTracker)
+            PlayerBehaviorTracker behaviorTracker,
+            IEmbeddingService embedder = null,
+            string npcId = null)
         {
             _llm = llm;
             _config = config;
             _personality = personality;
             _behaviorTracker = behaviorTracker;
+            _embedder = embedder;
+            _npcId = npcId;
             _actionRegistry = new ActionRegistry();
             _contextBuilder = new ContextBuilder(personality, _actionRegistry);
             _actionParser = new ActionParser(_actionRegistry);
         }
 
-        public Task InitializeAsync(CancellationToken ct = default)
+        public async Task InitializeAsync(CancellationToken ct = default)
         {
-            _memoryStore = new InMemoryStore();
-            return Task.CompletedTask;
+            var saved = _npcId != null
+                ? await MemorySerializer.LoadAsync(_npcId)
+                : new List<MemoryEntry>();
+
+            if (_embedder != null && _embedder.IsReady)
+            {
+                var store = new VectorMemoryStore(_embedder);
+                foreach (var entry in saved)
+                    await store.AddAsync(entry);
+                _memoryStore = store;
+                Debug.Log($"[NPCBrain] VectorMemoryStore ready — {saved.Count} memories loaded.");
+            }
+            else
+            {
+                var store = new InMemoryStore();
+                foreach (var entry in saved)
+                    await store.AddAsync(entry);
+                _memoryStore = store;
+                if (saved.Count > 0)
+                    Debug.Log($"[NPCBrain] InMemoryStore ready — {saved.Count} memories loaded.");
+            }
         }
 
         public async Task<ActionCommand> DecideAsync(NPCWorldView worldView, CancellationToken ct = default)
@@ -107,7 +134,6 @@ namespace NPC_AI.Brain
                     return GetFallback(worldView);
                 }
 
-                // Persist this decision as a short-term memory entry.
                 await _memoryStore.AddAsync(new MemoryEntry
                 {
                     Content = $"Decided to {parseResult.Command.ActionType} against {parseResult.Command.Target}. Reason: {parseResult.Command.Reasoning}",
@@ -115,6 +141,9 @@ namespace NPC_AI.Brain
                     Timestamp = DateTime.UtcNow,
                     Tags = new[] { "decision", parseResult.Command.ActionType.ToLower() }
                 });
+
+                if (_npcId != null)
+                    _ = MemorySerializer.SaveAsync(_npcId, _memoryStore.GetAll());
 
                 return parseResult.Command;
             }

@@ -9,10 +9,8 @@ using UnityEngine;
 
 namespace NPC_AI.Memory
 {
-    /// <summary>
-    /// Phase 4b memory store: extends InMemoryStore with semantic vector search.
+    /// Extends InMemoryStore with semantic vector search.
     /// Falls back to recency scoring for entries that have no embedding yet.
-    /// </summary>
     public class VectorMemoryStore : INPCMemoryStore
     {
         private readonly IEmbeddingService _embedder;
@@ -62,8 +60,6 @@ namespace NPC_AI.Memory
             List<MemoryEntry> semantic;
             try
             {
-                // Synchronous call here because GetRelevant is called from synchronous context in NPCBrain.
-                // The embedding model is fast enough (~5ms) that blocking is acceptable.
                 var embedding = _embedder.EmbedAsync(queryText).GetAwaiter().GetResult();
                 semantic = _index.Search(embedding, remaining + 3)
                     .Where(e => !recent.Contains(e))
@@ -77,6 +73,8 @@ namespace NPC_AI.Memory
 
             return recent.Concat(semantic).ToList();
         }
+
+        public List<MemoryEntry> GetAll() => new List<MemoryEntry>(_entries);
 
         public Task ClearAsync()
         {

@@ -5,12 +5,12 @@ using NPC_AI.Brain;
 using NPC_AI.Config;
 using NPC_AI.LLM;
 using NPC_AI.PlayerAnalysis;
+using NPC_AI.RAG;
 using UnityEngine;
 
 namespace NPC_AI.Core
 {
     /// MonoBehaviour entry point for one NPC. Owns the brain and drives the decision loop.
-    /// Attach this to your NPC GameObject. Wire up the config assets in the Inspector.
     public class NPCController : MonoBehaviour
     {
         [SerializeField] private LLMConfig llmConfig;
@@ -22,6 +22,7 @@ namespace NPC_AI.Core
 
         private INPCBrain _brain;
         private ILLMService _llm;
+        private IEmbeddingService _embedder;
         private float _decisionTimer;
         private CancellationTokenSource _lifetimeCts;
 
@@ -43,7 +44,10 @@ namespace NPC_AI.Core
             _llm = LLMServiceFactory.GetShared(llmConfig);
             await _llm.InitializeAsync(_lifetimeCts.Token);
 
-            _brain = new NPCBrain(_llm, npcConfig, personalityProfile, behaviorTracker);
+            _embedder = new OllamaEmbeddingAdapter(llmConfig);
+            await _embedder.InitializeAsync(_lifetimeCts.Token);
+
+            _brain = new NPCBrain(_llm, npcConfig, personalityProfile, behaviorTracker, _embedder, NpcId);
             await _brain.InitializeAsync(_lifetimeCts.Token);
 
             IsInitialized = true;
@@ -88,15 +92,13 @@ namespace NPC_AI.Core
             }
         }
         
-        /// Override this in a subclass to translate ActionCommand into actual Unity actions
-        /// (animations, NavMesh movement, attack logic, etc).
         protected virtual void ExecuteCommand(ActionCommand command)
         {
             Debug.Log($"[NPCController] {NpcId} executing: {command.ActionType} → {command.Target} (reason: {command.Reasoning})");
         }
         
         /// Populate a world-view snapshot from the current game state.
-        /// Override in a subclass to pull real values from your game systems.
+        /// Override in a subclass to pull real values from the game systems.
         protected virtual NPCWorldView BuildWorldView()
         {
             return new NPCWorldView
@@ -121,6 +123,7 @@ namespace NPC_AI.Core
         {
             _lifetimeCts?.Cancel();
             _lifetimeCts?.Dispose();
+            _embedder?.Dispose();
         }
     }
 }

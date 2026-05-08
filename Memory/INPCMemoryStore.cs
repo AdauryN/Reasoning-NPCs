@@ -12,6 +12,8 @@ namespace NPC_AI.Memory
         /// Implementations may use recency, importance, or vector similarity.
         List<MemoryEntry> GetRelevant(NPCWorldView context, int topK);
 
+        List<MemoryEntry> GetAll();
+
         Task ClearAsync();
     }
 }

@@ -46,6 +46,8 @@ namespace NPC_AI.Memory
                 .ToList();
         }
 
+        public List<MemoryEntry> GetAll() => new List<MemoryEntry>(_entries);
+
         public Task ClearAsync()
         {
             _entries.Clear();
