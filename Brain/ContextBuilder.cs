@@ -42,7 +42,7 @@ namespace NPC_AI.Brain
                 sb.AppendLine();
             }
 
-            // 4. Memory
+            // 4. Memory (inject up to budget, drop oldest first if over)
             if (memories != null && memories.Count > 0)
             {
                 sb.AppendLine("MEMORIES:");
@@ -57,7 +57,16 @@ namespace NPC_AI.Brain
                 sb.AppendLine();
             }
 
-            // 5. Available Actions
+            // 5. Game mechanics — explicit rules the LLM must respect
+            sb.AppendLine("GAME MECHANICS (you must respect these):");
+            sb.AppendLine("- ATTACK_MELEE and CLEAVE only deal damage when distance < 8m. If out of range, use CHARGE or SHOOT_ARROW instead.");
+            sb.AppendLine("- CHARGE closes distance AND deals damage. Use it when out of melee range.");
+            sb.AppendLine("- SHOOT_ARROW deals damage at any distance. Use it when you cannot close the gap.");
+            sb.AppendLine("- RETREAT when your HP is CRITICAL (below 30%).");
+            sb.AppendLine("- Do NOT use ATTACK_MELEE when the world state says OUT OF MELEE RANGE.");
+            sb.AppendLine();
+
+            // 6. Available Actions
             sb.AppendLine(BuildActionList());
             sb.AppendLine();
             sb.AppendLine("Reply ONLY with a single valid JSON object matching the action schema above. No explanation outside the JSON.");

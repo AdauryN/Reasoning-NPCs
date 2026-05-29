@@ -12,11 +12,12 @@ namespace NPC_AI.Memory
     {
         public static async Task SaveAsync(string npcId, List<MemoryEntry> entries)
         {
+            var basePath = Application.persistentDataPath;
             await Task.Run(() =>
             {
                 try
                 {
-                    var dir = Path.Combine(Application.persistentDataPath, "npc_memories");
+                    var dir = Path.Combine(basePath, "npc_memories");
                     Directory.CreateDirectory(dir);
                     var path = Path.Combine(dir, $"{SanitizeId(npcId)}.json");
 
@@ -33,12 +34,13 @@ namespace NPC_AI.Memory
 
         public static async Task<List<MemoryEntry>> LoadAsync(string npcId)
         {
+            var basePath = Application.persistentDataPath;
             return await Task.Run(() =>
             {
                 try
                 {
                     var path = Path.Combine(
-                        Application.persistentDataPath, "npc_memories",
+                        basePath, "npc_memories",
                         $"{SanitizeId(npcId)}.json");
 
                     if (!File.Exists(path)) return new List<MemoryEntry>();

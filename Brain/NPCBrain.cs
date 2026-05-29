@@ -130,7 +130,7 @@ namespace NPC_AI.Brain
                 var parseResult = _actionParser.Parse(response.Text);
                 if (!parseResult.Success)
                 {
-                    Debug.LogWarning($"[NPCBrain] Parse failed for {worldView.NpcId}: {parseResult.ErrorReason}");
+                    Debug.LogWarning($"[NPCBrain] Parse failed for {worldView.NpcId}: {parseResult.ErrorReason}\nRaw LLM output: {response.Text}");
                     return GetFallback(worldView);
                 }
 
@@ -158,7 +158,7 @@ namespace NPC_AI.Brain
         }
         
         /// Rule-based fallback: flee when low HP, attack otherwise.
-        /// This runs even when the LLM is offline — NPCs never freeze.
+        /// This runs even when the LLM is offline.
         private ActionCommand GetFallback(NPCWorldView worldView)
         {
             if (worldView.NpcHealthPct < _config.FallbackFleeHealthThreshold)

@@ -39,7 +39,7 @@ namespace NPC_AI.PlayerAnalysis
             if (events.Length == 0) return BehaviorStyle.Unknown;
 
             int attacks = Count(events, BehaviorEventType.DirectAttack, BehaviorEventType.GuardBreak, BehaviorEventType.UseRangedWeapon);
-            int dodges  = Count(events, BehaviorEventType.DodgeLeft, BehaviorEventType.DodgeRight);
+            int dodges  = Count(events, BehaviorEventType.DodgeLeft, BehaviorEventType.DodgeRight, BehaviorEventType.Block);
             int flanks  = Count(events, BehaviorEventType.Flank);
             int total   = events.Length;
 

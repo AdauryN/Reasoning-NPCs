@@ -46,32 +46,10 @@ namespace NPC_AI.Memory
 
         public List<MemoryEntry> GetRelevant(NPCWorldView context, int topK)
         {
-            // Strategy:
-            // 1. Always include the 3 most recent entries (recency guarantee)
-            // 2. Fill remaining slots with vector-similar entries
-            var recent = _entries.TakeLast(3).ToList();
-            int remaining = topK - recent.Count;
-
-            if (remaining <= 0 || _index.Count == 0) return recent;
-
-            // Build a query string from the world view to get a useful embedding.
-            var queryText = $"{context.LastPlayerAction} {context.NpcHealthPct:F1} hp distance {context.DistanceToPlayer:F0}";
-
-            List<MemoryEntry> semantic;
-            try
-            {
-                var embedding = _embedder.EmbedAsync(queryText).GetAwaiter().GetResult();
-                semantic = _index.Search(embedding, remaining + 3)
-                    .Where(e => !recent.Contains(e))
-                    .Take(remaining)
-                    .ToList();
-            }
-            catch
-            {
-                semantic = new List<MemoryEntry>();
-            }
-
-            return recent.Concat(semantic).ToList();
+            // Return the most recent entries only.
+            // Semantic vector search requires an async embedding call which would deadlock
+            // if called synchronously from the main thread.
+            return _entries.TakeLast(topK).ToList();
         }
 
         public List<MemoryEntry> GetAll() => new List<MemoryEntry>(_entries);

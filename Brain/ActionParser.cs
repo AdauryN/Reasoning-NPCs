@@ -4,6 +4,8 @@ using UnityEngine;
 namespace NPC_AI.Brain
 {
     /// Deserializes the LLM's JSON output into an ActionCommand.
+    /// Grammar-constrained sampling means this should rarely fail,
+    /// but a fallback is always applied when it does.
     public class ActionParser
     {
         private readonly ActionRegistry _registry;
@@ -23,18 +25,25 @@ namespace NPC_AI.Brain
                 // Use Unity's built-in JsonUtility for zero-dependency parsing.
                 var raw = JsonUtility.FromJson<RawActionJson>(StripCodeFences(llmOutput));
 
-                if (raw == null || string.IsNullOrEmpty(raw.action))
+                // Support both {"action":"X",...} and Ollama tool-call {"name":"X","parameters":{...}}
+                string actionType = !string.IsNullOrEmpty(raw.action) ? raw.action : raw.name;
+
+                if (raw == null || string.IsNullOrEmpty(actionType))
                     return ParseResult.Fail("Could not parse action field.", llmOutput);
 
-                if (!_registry.Contains(raw.action))
-                    return ParseResult.Fail($"Unknown action type: {raw.action}", llmOutput);
+                if (!_registry.Contains(actionType))
+                    return ParseResult.Fail($"Unknown action type: {actionType}", llmOutput);
+
+                string target    = raw.target    ?? raw.parameters?.target    ?? "player";
+                string reasoning = raw.reasoning ?? raw.parameters?.reasoning ?? "";
+                string urgency   = raw.urgency   ?? raw.parameters?.urgency   ?? "medium";
 
                 return ParseResult.Ok(new ActionCommand
                 {
-                    ActionType = raw.action,
-                    Target = raw.target ?? "player",
-                    Reasoning = raw.reasoning ?? "",
-                    Urgency = raw.urgency ?? "medium",
+                    ActionType = actionType,
+                    Target = target,
+                    Reasoning = reasoning,
+                    Urgency = urgency,
                     IsFromFallback = false
                 }, llmOutput);
             }
@@ -62,6 +71,16 @@ namespace NPC_AI.Brain
         private class RawActionJson
         {
             public string action;
+            public string name;        // Ollama tool-call format uses "name"
+            public string target;
+            public string reasoning;
+            public string urgency;
+            public RawParameters parameters;
+        }
+
+        [Serializable]
+        private class RawParameters
+        {
             public string target;
             public string reasoning;
             public string urgency;

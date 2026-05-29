@@ -1,20 +1,20 @@
-/**
- * NPC AI MCP Server
- *
- * Exposes live Unity game state as LLM-callable tools via the Model Context Protocol.
- * Transport: stdio (launch manually or have Unity spawn it via System.Diagnostics.Process).
- *
- * Unity must run a GameStateServer that responds to GET /state
- * with a JSON object describing the current game state snapshot.
- *
- * Usage:
- *   cd mcp-server && npm install && node index.js
- *
- * Tools exposed:
- *   get_npc_health        — NPC health as 0.0–1.0
- *   get_player_position   — Player world position {x, y, z}
- *   get_nearby_enemies    — Count of enemies within a radius
- *   get_distance_to_player — Distance in world units from NPC to player
+/*
+   NPC AI MCP Server
+ 
+   Exposes live Unity game state as LLM-callable tools via the Model Context Protocol.
+   Transport: stdio (launch manually or have Unity spawn it via System.Diagnostics.Process).
+ 
+   Unity must run a GameStateServer (HttpListener on port 7654) that responds to GET /state
+   with a JSON object describing the current game state snapshot.
+   Usage:
+   cd mcp-server && npm install && node index.js
+ 
+   Tools exposed:
+    get_npc_health              - NPC health as 0.0-1.0
+    get_player_position         - Player world position {x, y, z}
+    get_nearby_enemies          - Count of enemies within a radius
+    get_distance_to_player      - Distance in world units from NPC to player
+    get_player_behavior_summary - Player fighting style, attack/dodge rates, tendencies
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -38,11 +38,20 @@ async function fetchUnityState() {
       playerPosition: { x: 0, y: 0, z: 0 },
       enemiesNearby: 0,
       distanceToPlayer: 10.0,
+      playerBehavior: {
+        dominantStyle: "Unknown",
+        recentTrend: "Unknown",
+        attackFrequency: 0,
+        dodgeFrequency: 0,
+        prefersRanged: false,
+        healThreshold: 0.4,
+        flankingTendency: 0,
+      },
     };
   }
 }
 
-// MCP server setup
+// MCP server setup 
 
 const server = new McpServer({
   name: "npc-ai-mcp-server",
@@ -104,7 +113,26 @@ server.tool(
   }
 );
 
-// Start
+server.tool(
+  "get_player_behavior_summary",
+  "Returns a summary of the player's current behavior profile: fighting style, attack and dodge rates, ranged preference, heal threshold, and flanking tendency.",
+  {},
+  async () => {
+    const state = await fetchUnityState();
+    const behavior = state.playerBehavior ?? {
+      dominantStyle: "Unknown",
+      recentTrend: "Unknown",
+      attackFrequency: 0,
+      dodgeFrequency: 0,
+      prefersRanged: false,
+      healThreshold: 0.4,
+      flankingTendency: 0,
+    };
+    return { content: [{ type: "text", text: JSON.stringify(behavior) }] };
+  }
+);
+
+// Start 
 
 const transport = new StdioServerTransport();
 await server.connect(transport);

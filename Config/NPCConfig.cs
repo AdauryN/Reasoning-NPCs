@@ -9,7 +9,6 @@ namespace NPC_AI.Config
     {
         [Header("Decision Timing")]
         [Tooltip("How often (in seconds) this NPC queries the LLM for a decision.")]
-        [Range(0.5f, 10f)]
         public float DecisionIntervalSeconds = 2f;
 
         [Tooltip("How long to wait (seconds) for an LLM response before falling back to the rule-based policy.")]

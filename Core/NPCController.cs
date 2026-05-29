@@ -11,6 +11,7 @@ using UnityEngine;
 namespace NPC_AI.Core
 {
     /// MonoBehaviour entry point for one NPC. Owns the brain and drives the decision loop.
+    /// This has to be attached to the NPC GameObject. Wire up the config assets in the Inspector.
     public class NPCController : MonoBehaviour
     {
         [SerializeField] private LLMConfig llmConfig;
@@ -29,8 +30,9 @@ namespace NPC_AI.Core
         public string NpcId { get; private set; }
         public bool IsInitialized { get; private set; }
         public ActionCommand LastCommand { get; private set; }
+        public virtual float HealthPct => 1f;
 
-        private void Awake()
+        protected virtual void Awake()
         {
             NpcId = $"{gameObject.name}_{GetInstanceID()}";
             _lifetimeCts = new CancellationTokenSource();
@@ -54,9 +56,16 @@ namespace NPC_AI.Core
             Debug.Log($"[NPCController] {NpcId} ready.");
         }
 
+        public void TriggerDecision()
+        {
+            if (!IsInitialized || !_brain.IsIdle) return;
+            _ = RequestDecisionAsync();
+        }
+
         private void Update()
         {
             if (!IsInitialized || !_brain.IsIdle) return;
+            if (npcConfig.DecisionIntervalSeconds <= 0f) return;
 
             _decisionTimer += Time.deltaTime;
             if (_decisionTimer >= npcConfig.DecisionIntervalSeconds)
@@ -92,13 +101,15 @@ namespace NPC_AI.Core
             }
         }
         
+        /// Override this in a subclass to translate ActionCommand into actual Unity actions
+        /// (animations, NavMesh movement, attack logic, etc).
         protected virtual void ExecuteCommand(ActionCommand command)
         {
             Debug.Log($"[NPCController] {NpcId} executing: {command.ActionType} → {command.Target} (reason: {command.Reasoning})");
         }
         
         /// Populate a world-view snapshot from the current game state.
-        /// Override in a subclass to pull real values from the game systems.
+        /// Override in a subclass to pull real values from your game systems.
         protected virtual NPCWorldView BuildWorldView()
         {
             return new NPCWorldView
@@ -117,6 +128,25 @@ namespace NPC_AI.Core
                 NpcPosition = transform.position,
                 PlayerPosition = transform.position
             };
+        }
+
+        [ContextMenu("Clear NPC Memory")]
+        private void ClearMemory()
+        {
+            var id = string.IsNullOrEmpty(NpcId) ? $"{gameObject.name}_{GetInstanceID()}" : NpcId;
+            var path = System.IO.Path.Combine(
+                Application.persistentDataPath, "npc_memories",
+                string.Concat(id.Split(System.IO.Path.GetInvalidFileNameChars())) + ".json");
+
+            if (System.IO.File.Exists(path))
+            {
+                System.IO.File.Delete(path);
+                Debug.Log($"[NPCController] Memory cleared for {id} ({path})");
+            }
+            else
+            {
+                Debug.Log($"[NPCController] No memory file found for {id} ({path})");
+            }
         }
 
         private void OnDestroy()
