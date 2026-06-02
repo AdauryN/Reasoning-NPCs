@@ -86,7 +86,7 @@ namespace NPC_AI.Brain
         {
             var sb = new StringBuilder();
             sb.AppendLine("AVAILABLE ACTIONS (choose one):");
-            sb.AppendLine("Schema: {\"action\": \"ACTION_TYPE\", \"target\": \"target\", \"reasoning\": \"brief reason\", \"urgency\": \"low|medium|high\"}");
+            sb.AppendLine("Schema: {\"action\": \"ACTION_TYPE\", \"target\": \"target\", \"reasoning\": \"1-2 sentences explaining WHY you chose this action based on your HP, distance, and player behavior\", \"urgency\": \"low|medium|high\"}");
             sb.AppendLine();
 
             foreach (var actionType in _personality.AllowedActionTypes)

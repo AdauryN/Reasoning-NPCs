@@ -32,15 +32,9 @@ namespace NPC_AI.Brain
         private void RegisterDefaults()
         {
             Register(new AttackMeleeAction());
-            Register(new ChargeAction());
-            Register(new DodgeAction());
             Register(new FleeAction());
             Register(new TauntAction());
-            Register(new PatrolAction());
-            Register(new IdleAction());
-            Register(new ShootArrowAction());
-            Register(new MoveToCoverAction());
-            Register(new CleaveAction());
+            Register(new ChargeAction());
         }
     }
 }
